@@ -1,0 +1,30 @@
+# paths.yaml - SỬA ĐƯỜNG DẪN CHO ĐÚNG MÁY TRƯỚC KHI CHẠY
+
+# Thư mục chứa datasets (MVTec, BTAD, MPDD, Brain_AD, Liver_AD, Retina_RESC_AD)
+data_root: /path/to/datasets
+
+# Thư mục source code AA-CLIP (sau khi git clone)
+aaclip_repo: /path/to/AA-CLIP
+
+# Thư mục chứa checkpoint AA-CLIP (text_adapter.pth + image_adapter_20.pth)
+aaclip_checkpoint: /path/to/checkpoints/aaclip
+
+# Mapping tên dataset -> subfolder trong data_root
+dataset_paths:
+  MVTec: MVTec
+  BTAD: BTAD
+  MPDD: MPDD
+  Brain: Brain_AD
+  Liver: Liver_AD
+  Retina: Retina_RESC_AD
+  VisA: VisA
+
+# Output directories
+dump_root: ./dumps
+results_dir: ./results
+figs_dir: ./figs
+
+# Evaluation settings
+source_domain: VisA
+target_far: 0.05
+epoch: 20
