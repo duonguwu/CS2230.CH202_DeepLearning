@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.log
+*.aux
+*.out
+*.bbl
+*.blg
+*.synctex.gz
+dumps/
+datasets/
+checkpoints/
+*.pth
