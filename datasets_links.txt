@@ -1,0 +1,6 @@
+https://www.kaggle.com/datasets/ipythonx/mvtec-ad
+https://www.kaggle.com/datasets/duongkaiba/btad-dataset
+https://www.kaggle.com/datasets/duongkaiba/mpdd-dataset
+https://www.kaggle.com/datasets/duongkaiba/bmad-aaclip
+https://www.kaggle.com/datasets/tensura3607/amazon-visa-anomaly
+https://www.kaggle.com/datasets/duongkaiba/polyp-dataset
