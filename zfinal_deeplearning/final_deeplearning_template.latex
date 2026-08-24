@@ -124,17 +124,6 @@ t_{c,\alpha} = r_{(m)}, \quad m = \min\!\left\{\left\lceil (K+1)(1-\alpha) \righ
 % =====================================================================
 \section{Thực nghiệm}
 
-\subsection{Thiết lập}
-
-\textbf{Backbone:} AA-CLIP (Ma et al., CVPR 2025), huấn luyện trên VisA, áp dụng zero-shot lên tất cả miền đích.
-
-\textbf{Dữ liệu:} 6 bộ thuộc 2 miền: \textit{Công nghiệp} gồm MVTec-AD (15 lớp), BTAD (3 lớp), MPDD (6 lớp); \textit{Y tế} gồm Brain MRI, Liver CT, Retina OCT từ BMAD.
-
-\textbf{Giao thức:} Metric tính per-class rồi macro-average. CalZSAD dùng $K{=}20$ ảnh bình thường mỗi lớp. Kết quả trung bình qua 8 seed (image) và 3 seed (pixel). FPR mục tiêu $\alpha{=}5\%$; pixel-FAR mục tiêu $\beta{=}1\%$.
-
-\textbf{Metric:} Metric AUROC, AP và AUPRO được tích hợp trên toàn bộ dải ngưỡng, còn AUPIMO trên vùng FPR thấp; cả bốn đều là metric xếp hạng và không phụ thuộc vào một ngưỡng quyết định cố định. Ngược lại, FPR, Recall, F1 và Dice là các metric phụ thuộc ngưỡng và phản ánh trực tiếp hiệu năng của một hệ thống khi được triển khai tại một điểm vận hành cụ thể. Cột Oracle F1 biểu thị F1 tối đa thu được khi quét toàn bộ các ngưỡng trên tập test có nhãn; giá trị này được dùng làm mốc tham chiếu để tách ảnh hưởng của việc chọn ngưỡng khỏi chất lượng biểu diễn của backbone. Khoảng cách giữa F1 tại ngưỡng do CalZSAD lựa chọn và Oracle F1 vì vậy định lượng phần hiệu năng mất đi do việc chọn ngưỡng, chứ không phải do backbone.
-
-
 \begin{table*}[!t]
 \caption{Kết quả mức ảnh trên backbone AA-CLIP. ``Ref.'' là img-AUROC từ paper gốc, ``Ours'' là kết quả reproduce. Các cột còn lại là metric vận hành từ CalZSAD tại FPR $\approx 5\%$ ($K{=}20$, ngưỡng conformal, tín hiệu top-1\%).}
 \label{tab:image_results}
@@ -184,6 +173,16 @@ t_{c,\alpha} = r_{(m)}, \quad m = \min\!\left\{\left\lceil (K+1)(1-\alpha) \righ
 \end{tabular}%
 }
 \end{table*}
+
+\subsection{Thiết lập}
+
+\textbf{Backbone:} AA-CLIP (Ma et al., CVPR 2025), huấn luyện trên VisA, áp dụng zero-shot lên tất cả miền đích.
+
+\textbf{Dữ liệu:} 6 bộ thuộc 2 miền: \textit{Công nghiệp} gồm MVTec-AD (15 lớp), BTAD (3 lớp), MPDD (6 lớp); \textit{Y tế} gồm Brain MRI, Liver CT, Retina OCT từ BMAD.
+
+\textbf{Giao thức:} Metric tính per-class rồi macro-average. CalZSAD dùng $K{=}20$ ảnh bình thường mỗi lớp. Kết quả trung bình qua 8 seed (image) và 3 seed (pixel). FPR mục tiêu $\alpha{=}5\%$; pixel-FAR mục tiêu $\beta{=}1\%$.
+
+\textbf{Metric:} Metric AUROC, AP và AUPRO được tích hợp trên toàn bộ dải ngưỡng, còn AUPIMO trên vùng FPR thấp; cả bốn đều là metric xếp hạng và không phụ thuộc vào một ngưỡng quyết định cố định. Ngược lại, FPR, Recall, F1 và Dice là các metric phụ thuộc ngưỡng và phản ánh trực tiếp hiệu năng của một hệ thống khi được triển khai tại một điểm vận hành cụ thể. Cột Oracle F1 biểu thị F1 tối đa thu được khi quét toàn bộ các ngưỡng trên tập test có nhãn; giá trị này được dùng làm mốc tham chiếu để tách ảnh hưởng của việc chọn ngưỡng khỏi chất lượng biểu diễn của backbone. Khoảng cách giữa F1 tại ngưỡng do CalZSAD lựa chọn và Oracle F1 vì vậy định lượng phần hiệu năng mất đi do việc chọn ngưỡng, chứ không phải do backbone.
 
 \subsection{Kết quả mức ảnh}
 
