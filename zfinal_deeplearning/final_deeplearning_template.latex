@@ -167,7 +167,7 @@ CalZSAD kiểm soát FPR sát mức mục tiêu 5\% trên cả 6 bộ (0.94\% đ
 
 Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel.
 
-\begin{table*}[H]
+\begin{table*}[!htbp]
 \caption{Kết quả mức pixel trên backbone AA-CLIP. Dice@FAR1\% là hệ số Dice khi binarize bản đồ bất thường tại ngưỡng pixel-FAR 1\%.}
 \label{tab:pixel_results}
 \centering
