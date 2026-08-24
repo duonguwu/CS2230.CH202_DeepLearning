@@ -132,9 +132,7 @@ t_{c,\alpha} = r_{(m)}, \quad m = \min\!\left\{\left\lceil (K+1)(1-\alpha) \righ
 
 \textbf{Giao thức:} Metric tính per-class rồi macro-average. CalZSAD dùng $K{=}20$ ảnh bình thường mỗi lớp. Kết quả trung bình qua 8 seed (image) và 3 seed (pixel). FPR mục tiêu $\alpha{=}5\%$; pixel-FAR mục tiêu $\beta{=}1\%$.
 
-\subsection{Kết quả mức ảnh}
 
-Bảng~\ref{tab:image_results} trình bày kết quả mức ảnh. Cột ``Ref.'' là AUROC từ paper AA-CLIP gốc; cột ``Ours'' là kết quả reproduce của nhóm (chênh lệch do khác data split và preprocessing).
 
 \begin{table*}[!t]
 \caption{Kết quả mức ảnh trên backbone AA-CLIP. ``Ref.'' là img-AUROC từ paper gốc, ``Ours'' là kết quả reproduce. Các cột còn lại là metric vận hành từ CalZSAD tại FPR $\approx 5\%$ ($K{=}20$, ngưỡng conformal, tín hiệu top-1\%).}
@@ -161,13 +159,7 @@ Bảng~\ref{tab:image_results} trình bày kết quả mức ảnh. Cột ``Ref.
 }
 \end{table*}
 
-CalZSAD kiểm soát FPR sát mức mục tiêu 5\% trên cả 6 bộ (0.94\% đến 5.74\%). Với công nghiệp, F1 đạt 83.70 (MVTec), 74.26 (BTAD), 46.21 (MPDD), chỉ cách oracle 3 đến 6 điểm. Với y tế, Retina đạt F1 63.81 (oracle 71.94); Brain và Liver thấp hơn nhưng oracle cũng thấp (42.92 và 13.55), cho thấy hạn chế nằm ở backbone chứ không phải chọn ngưỡng.
-
-\subsection{Kết quả mức pixel}
-
-Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel.
-
-\begin{table*}[!htbp]
+\begin{table*}[!t]
 \caption{Kết quả mức pixel trên backbone AA-CLIP. Dice@FAR1\% là hệ số Dice khi binarize bản đồ bất thường tại ngưỡng pixel-FAR 1\%.}
 \label{tab:pixel_results}
 \centering
@@ -192,7 +184,13 @@ Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel.
 }
 \end{table*}
 
-Pixel-AUROC reproduce sát paper gốc (chênh $\pm$0.75). Điểm đáng chú ý: tất cả 6 bộ có px-AUROC trên 92\% nhưng px-AP chỉ từ 9.96 (Liver) đến 63.54 (Retina), khoảng cách 30 đến 88 điểm. Hiện tượng ``AUROC lạc quan'' này xảy ra do mất cân bằng cực đoan ở mức pixel, cho thấy cần metric bổ sung như Dice hoặc AUPIMO. CalZSAD đạt pixel-FPR sát 1\% (0.87 đến 1.09\%), Retina đạt Dice cao nhất (50.11).
+\subsection{Kết quả mức ảnh}
+
+Bảng~\ref{tab:image_results} trình bày kết quả mức ảnh. Cột ``Ref.'' là AUROC từ paper AA-CLIP gốc; cột ``Ours'' là kết quả reproduce của nhóm (chênh lệch do khác data split và preprocessing). CalZSAD kiểm soát FPR sát mức mục tiêu 5\% trên cả 6 bộ (0.94\% đến 5.74\%). Với công nghiệp, F1 đạt 83.70 (MVTec), 74.26 (BTAD), 46.21 (MPDD), chỉ cách oracle 3 đến 6 điểm. Với y tế, Retina đạt F1 63.81 (oracle 71.94); Brain và Liver thấp hơn nhưng oracle cũng thấp (42.92 và 13.55), cho thấy hạn chế nằm ở backbone chứ không phải chọn ngưỡng.
+
+\subsection{Kết quả mức pixel}
+
+Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel. Pixel-AUROC reproduce sát paper gốc (chênh $\pm$0.75). Điểm đáng chú ý: tất cả 6 bộ có px-AUROC trên 92\% nhưng px-AP chỉ từ 9.96 (Liver) đến 63.54 (Retina), khoảng cách 30 đến 88 điểm. Hiện tượng ``AUROC lạc quan'' này xảy ra do mất cân bằng cực đoan ở mức pixel, cho thấy cần metric bổ sung như Dice hoặc AUPIMO. CalZSAD đạt pixel-FPR sát 1\% (0.87 đến 1.09\%), Retina đạt Dice cao nhất (50.11).
 
 % =====================================================================
 % V. KẾT LUẬN
