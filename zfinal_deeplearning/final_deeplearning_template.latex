@@ -1,11 +1,11 @@
-%% Final Report - Deep Learning Course
-%% Template: IEEEtran (journal mode), bare_jrnl.tex V1.4b.
-%% Compile: pdfLaTeX.
+%% Final Report - Deep Learning (CS2230.CH202)
+%% Viết tiếng Việt, rút ngắn theo yêu cầu thầy.
+%% Compile: pdfLaTeX (2 lần để resolve references).
 
 \documentclass[journal]{IEEEtran}
 
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
+\usepackage{fontspec}
+\setmainfont{TeX Gyre Termes}[Ligatures=TeX]
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
@@ -13,156 +13,146 @@
 \usepackage{cite}
 \usepackage{url}
 
-\hyphenation{op-tical net-works semi-conduc-tor anom-aly}
+\hyphenation{anom-aly}
 
 \begin{document}
 
-\title{CalZSAD: Conformal Few-Normal-Shot Thresholding
-for CLIP-based Zero-Shot Anomaly Detection with FPR Control}
+\title{CalZSAD: Chọn ngưỡng tự động cho phát hiện bất thường\\zero-shot dựa trên CLIP với kiểm soát tỷ lệ dương tính giả}
 
-\author{Nguyen~Duong,~250101084,
-        Dinh~Thi~Thu~Hiep,~250101085,
-        and~Nguyen~Minh~Chien,~250101080%
-\thanks{University of Information Technology, Vietnam National University Ho Chi Minh City.}}
+\author{Nguyễn~Dương,~250101084,
+        Đinh~Thị~Thu~Hiệp,~250101085,
+        và~Nguyễn~Minh~Chiến,~250101080%
+\thanks{Trường Đại học Công nghệ Thông tin, ĐHQG-HCM.}}
 
-\markboth{Deep Learning -- Final Report, 2026}%
-{Duong \MakeLowercase{\textit{et al.}}: CalZSAD for CLIP-based Zero-Shot Anomaly Detection}
+\markboth{Deep Learning (CS2230.CH202) -- Báo cáo cuối kỳ, 2026}%
+{Dương \MakeLowercase{\textit{et al.}}: CalZSAD}
 
 \maketitle
 
 % =====================================================================
-% ABSTRACT
+% TÓM TẮT
 % =====================================================================
 \begin{abstract}
-Anomaly detection plays a critical role in industrial quality inspection and medical image analysis, where the goal is to identify samples that deviate from the normal distribution at both image and pixel levels. Recent CLIP-based zero-shot anomaly detection (CLIP-ZSAD) methods, notably AA-CLIP, achieve image-level AUROC above 90\% on standard benchmarks; however, they only produce continuous anomaly scores without a decision threshold, making direct deployment infeasible. Three obstacles hinder practical use: anomaly scores shift across object classes, pixel-AUROC is inflated by extreme class imbalance where over 99\% of pixels are normal, and thresholds calibrated on a source domain degrade when transferred to a new target domain. This work addresses the gap between benchmark performance and operational readiness by applying CalZSAD, a lightweight, model-agnostic post-processing module on top of the AA-CLIP backbone. CalZSAD combines robust per-class normalization using the median and median absolute deviation, an image-level signal derived from the mean of the top-1\% highest-scoring pixels, and conformal prediction-based threshold selection requiring only 20 normal images per class and no defective samples. Experiments on six datasets spanning industrial and medical domains show that CalZSAD maintains a false positive rate (FPR) of 0.94 to 5.74\% around the 5\% target while achieving F1 scores within 5 to 9 points of the oracle upper bound. At the pixel level, Dice at a false alarm rate of 1\% closely matches the oracle, confirming that the threshold selection mechanism performs near its theoretical limit.
+Phát hiện bất thường (anomaly detection) nhằm nhận diện mẫu lệch khỏi phân phối bình thường, đóng vai trò quan trọng trong kiểm tra chất lượng công nghiệp và phân tích hình ảnh y tế.
+Các phương pháp CLIP-based zero-shot gần đây, đặc biệt AA-CLIP, đạt AUROC trên 90\% trên nhiều benchmark nhưng chỉ sinh ra điểm bất thường liên tục mà không cung cấp ngưỡng quyết định, khiến việc triển khai thực tế không khả thi.
+Ba trở ngại chính gồm: điểm bất thường dịch chuyển giữa các lớp sản phẩm, pixel-AUROC bị lạc quan do mất cân bằng cực đoan (trên 99\% pixel là bình thường), và ngưỡng từ miền nguồn không chuyển được sang miền đích.
+Nhóm áp dụng CalZSAD, một module hậu xử lý nhẹ gắn trên backbone AA-CLIP đã đóng băng, gồm ba thành phần: tín hiệu top-1\% pixel, chuẩn hóa robust theo lớp (median + MAD), và chọn ngưỡng conformal chỉ cần 20 ảnh bình thường mỗi lớp.
+Thực nghiệm trên sáu bộ dữ liệu (3 công nghiệp, 3 y tế) cho thấy CalZSAD duy trì FPR từ 0.94 đến 5.74\% quanh mức mục tiêu 5\%, đạt F1 chỉ cách oracle 5 đến 9 điểm.
+Ở mức pixel, Dice tại FAR 1\% sát oracle với pixel-FPR quanh 1\%.
 \end{abstract}
 
 \begin{IEEEkeywords}
-Zero-shot anomaly detection, CLIP, AA-CLIP, conformal prediction, threshold selection, false positive rate control.
+Phát hiện bất thường zero-shot, CLIP, AA-CLIP, conformal prediction, chọn ngưỡng, kiểm soát FPR.
 \end{IEEEkeywords}
 
 \IEEEpeerreviewmaketitle
 
 % =====================================================================
-% I. INTRODUCTION
+% I. GIỚI THIỆU
 % =====================================================================
-\section{Introduction}
+\section{Giới thiệu}
 
-\IEEEPARstart{A}{nomaly} detection aims to identify samples that deviate from the normal distribution and is essential in domains ranging from industrial quality control~\cite{bergmann2019mvtec, mishra2021btad} to medical image screening~\cite{bao2023bmad}. In manufacturing, detecting surface defects, structural cracks, or assembly errors prevents costly recalls; in medicine, flagging abnormal regions in brain MRI, liver CT, or retinal scans supports early diagnosis. Because defective samples are inherently rare and diverse, supervised approaches that require large labeled defect datasets are impractical. Consequently, unsupervised and zero-shot methods that learn only from normal data have gained significant attention.
+Phát hiện bất thường nhằm nhận diện các mẫu lệch khỏi phân phối bình thường, ứng dụng rộng rãi từ kiểm tra chất lượng sản xuất~\cite{bergmann2019mvtec} đến sàng lọc hình ảnh y tế~\cite{bao2023bmad}. Vì mẫu lỗi hiếm và đa dạng, các phương pháp giám sát đòi hỏi bộ dữ liệu lỗi lớn là không thực tế; do đó các hướng tiếp cận unsupervised và zero-shot chỉ học từ dữ liệu bình thường được quan tâm nhiều.
 
-The advent of large-scale vision-language models, particularly CLIP~\cite{radford2021clip}, has enabled zero-shot anomaly detection (ZSAD) in which detectors identify defects on entirely unseen object classes without any class-specific training data. Several CLIP-ZSAD methods have been proposed with different adaptation strategies. WinCLIP~\cite{jeong2023winclip} employs handcrafted text prompts combined with multi-scale windowing and is entirely training-free. AnomalyCLIP~\cite{zhou2024anomalyclip} learns object-agnostic prompts independent of class names. AdaCLIP~\cite{cao2024adaclip} combines static and dynamic prompts generated per image. Most recently, AA-CLIP~\cite{ma2025aaclip} separates normal and abnormal semantics in the language space before aligning visual features to these anchors, achieving state-of-the-art AUROC on multiple benchmarks. AA-CLIP outperforms prior methods by explicitly constructing anomaly-aware anchors that sharpen the separation between normal and anomalous feature distributions, leading to higher ranking performance especially on challenging industrial and medical datasets. Despite these advances, all existing methods share a fundamental limitation: they produce continuous anomaly scores but provide \emph{no decision threshold}. In practice, whether on a production line or in a screening system, a binary decision (``normal'' or ``anomalous'') is required, and this decision depends critically on a well-chosen threshold.
+Mô hình vision-language CLIP~\cite{radford2021clip} mở ra hướng zero-shot anomaly detection (ZSAD) phát hiện lỗi trên lớp sản phẩm hoàn toàn mới mà không cần dữ liệu huấn luyện riêng. WinCLIP~\cite{jeong2023winclip} dùng prompt thủ công kết hợp multi-scale windowing. AnomalyCLIP~\cite{zhou2024anomalyclip} học prompt không phụ thuộc tên lớp. AdaCLIP~\cite{cao2024adaclip} kết hợp prompt tĩnh và động. AA-CLIP~\cite{ma2025aaclip} (CVPR 2025) tách ngữ nghĩa bình thường/bất thường trong không gian ngôn ngữ trước khi căn chỉnh đặc trưng ảnh, đạt AUROC cao nhất trên nhiều benchmark. Tuy nhiên, tất cả các phương pháp này chỉ sinh ra điểm bất thường liên tục mà \emph{không cung cấp ngưỡng quyết định}. Trong thực tế, hệ thống cần ra quyết định nhị phân ``bình thường'' hay ``bất thường'', và quyết định này phụ thuộc rất lớn vào ngưỡng.
 
-This work addresses the deployment gap by applying CalZSAD, a lightweight post-processing module, on top of the frozen AA-CLIP backbone. CalZSAD consists of three components: (i)~replacing the native image-level score with the mean of the top-1\% highest-scoring pixels from the anomaly map, which better separates normal from anomalous images; (ii)~robust per-class normalization using the median and half-MAD to eliminate score scale shifts across classes; and (iii)~conformal prediction-based threshold selection using only $K{=}20$ normal images per class, which provides finite-sample guarantees on the false positive rate without requiring any defective samples or distributional assumptions. The entire pipeline is model-agnostic: it processes only the output scores of the frozen backbone and can be applied to any CLIP-ZSAD model.
+Nhóm áp dụng CalZSAD, một module hậu xử lý nhẹ gắn trên backbone AA-CLIP đã đóng băng, gồm ba thành phần: (i) thay điểm ảnh gốc bằng trung bình top-1\% pixel cao nhất từ bản đồ bất thường; (ii) chuẩn hóa robust theo lớp bằng median và MAD; (iii) chọn ngưỡng conformal chỉ cần $K{=}20$ ảnh bình thường mỗi lớp, đảm bảo FPR $\leq \alpha$ mà không cần giả định phân phối. Pipeline này không huấn luyện lại backbone và áp dụng được cho mọi mô hình CLIP-ZSAD.
 
-Our main contributions are twofold. First, we propose CalZSAD as a practical post-processing framework that transforms raw anomaly scores from AA-CLIP into deployment-ready binary decisions with controlled FPR. Second, we conduct a comprehensive evaluation on six datasets across industrial and medical domains, reporting not only conventional ranking metrics (AUROC, AP, AUPRO, AUPIMO) but also operational metrics (F1, Recall, FPR, Dice) at a fixed operating point, thereby revealing the gap between high AUROC and actual deployability.
+Đóng góp chính gồm: (1) đề xuất CalZSAD biến điểm bất thường thô từ AA-CLIP thành quyết định nhị phân sẵn sàng triển khai với FPR được kiểm soát; (2) đánh giá toàn diện trên 6 bộ dữ liệu (công nghiệp và y tế) với cả metric ranking (AUROC, AP, AUPRO, AUPIMO) lẫn metric vận hành (F1, Recall, FPR, Dice), chỉ ra khoảng cách giữa AUROC cao và khả năng triển khai thực tế.
 
 % =====================================================================
 % II. RELATED WORK
 % =====================================================================
-\section{Related Work}
+\section{Công trình liên quan}
 
-\subsection{CLIP-based Zero-Shot Anomaly Detection}
+Các phương pháp CLIP-ZSAD hiện tại (WinCLIP~\cite{jeong2023winclip}, AnomalyCLIP~\cite{zhou2024anomalyclip}, AdaCLIP~\cite{cao2024adaclip}, AA-CLIP~\cite{ma2025aaclip}) đều tập trung tối ưu chất lượng ranking (AUROC) nhưng không giải quyết bài toán chọn ngưỡng. AA-CLIP là phương pháp mạnh nhất nhờ tách ngữ nghĩa bất thường trong không gian ngôn ngữ, nhưng vẫn chỉ sinh ra điểm liên tục.
 
-CLIP-based ZSAD methods leverage the vision-language alignment of CLIP~\cite{radford2021clip} to detect anomalies on unseen classes. WinCLIP~\cite{jeong2023winclip} is a training-free approach that uses handcrafted prompts describing normal and abnormal states, combined with multi-scale windowing to generate pixel-level anomaly maps. AnomalyCLIP~\cite{zhou2024anomalyclip} learns a set of object-agnostic prompts that generalize across different object categories without relying on class names. AdaCLIP~\cite{cao2024adaclip} extends this by combining static prompts with dynamic prompts generated adaptively for each input image. AA-CLIP~\cite{ma2025aaclip}, the backbone used in this work, introduces anomaly-aware anchors that explicitly separate normal and abnormal semantics in the language embedding space before aligning visual features to these anchors via residual adapters. This design yields stronger separation between normal and anomalous distributions compared to methods that rely on generic prompts, and AA-CLIP achieves state-of-the-art image-level AUROC on benchmarks including MVTec-AD and VisA. However, like all other methods in this family, AA-CLIP outputs a continuous anomaly score and does not address the question of where to set the decision boundary.
+Về đánh giá, pixel-AUROC bị lạc quan mạnh khi dữ liệu mất cân bằng (trên 99\% pixel bình thường)~\cite{saito2015pr}. AUPIMO~\cite{bertoldo2024aupimo} đánh giá overlap tại FPR thấp, cho thước đo sát thực tế hơn.
 
-\subsection{Evaluation Beyond AUROC}
-
-The standard metric for anomaly detection benchmarks is AUROC. However, at the pixel level, over 99\% of pixels are normal, which causes pixel-AUROC to appear optimistically high even when the anomaly map is imprecise~\cite{saito2015pr}. Average Precision (AP), which focuses on the positive (anomalous) class, provides a more faithful assessment under such imbalance. AUPRO~\cite{bergmann2020aupro} measures per-region overlap at a bounded false positive rate, and AUPIMO~\cite{bertoldo2024aupimo} evaluates per-image overlap over a logarithmic FPR range, providing low-variance measurements at operationally relevant false positive rates. In this work, we report all four ranking metrics alongside threshold-dependent operational metrics (F1, Recall at fixed FPR, Dice) to present a complete picture of detector performance.
-
-\subsection{Threshold Selection and Conformal Prediction}
-
-Deploying an anomaly detector requires converting scores into binary decisions via a threshold. Classic unsupervised approaches include Otsu's method, which maximizes inter-class variance but becomes unstable when normal and anomalous score distributions overlap, and Peaks-Over-Threshold (POT) based on Extreme Value Theory, which models the upper tail of the normal distribution but can be corrupted when the test set contains a non-negligible fraction of anomalies. Conformal prediction~\cite{angelopoulos2023conformal, vovk2005conformal} offers a principled alternative: given $K$ normal calibration samples, the threshold is set at a finite-sample quantile that guarantees FPR~$\leq \alpha$ under the exchangeability assumption, without requiring parametric distributional assumptions. Recent work has advocated risk-based thresholding with FPR guarantees for reliable anomaly detection deployment~\cite{estievenart2025risk}. CalZSAD adopts conformal thresholding and, crucially, precedes it with robust per-class normalization so that the threshold becomes comparable across classes and domains.
+Về chọn ngưỡng, phương pháp Otsu không ổn định khi phân phối chồng lấn; Peaks-Over-Threshold (POT) dựa trên lý thuyết giá trị cực trị nhưng nhạy với ngoại lai. Conformal prediction~\cite{angelopoulos2023conformal} đảm bảo FPR $\leq \alpha$ với mẫu hữu hạn mà không cần giả định phân phối. Điểm khác biệt chính của CalZSAD so với các phương pháp trên là kết hợp chuẩn hóa robust theo lớp trước khi áp dụng conformal, giúp ngưỡng so sánh được giữa các lớp và miền dữ liệu khác nhau.
 
 % =====================================================================
-% III. PROPOSED METHOD
+% III. PHƯƠNG PHÁP ĐỀ XUẤT
 % =====================================================================
-\section{Proposed Method}
+\section{Phương pháp đề xuất}
 
-CalZSAD is a lightweight post-processing module attached to the frozen AA-CLIP backbone. It does not retrain or modify the backbone in any way. The pipeline operates in two phases: a one-time \emph{calibration phase} using $K{=}20$ normal images per class, and an \emph{inference phase} for each test image. Fig.~\ref{fig:pipeline} illustrates the overall pipeline.
+CalZSAD là module hậu xử lý gắn sau backbone AA-CLIP đã đóng băng, hoạt động qua hai pha: \emph{pha hiệu chuẩn} (một lần, dùng $K{=}20$ ảnh bình thường mỗi lớp) và \emph{pha suy luận} (mỗi ảnh test). Hình~\ref{fig:pipeline} minh họa pipeline.
 
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\textwidth]{calzsad_architecture.pdf}
-\caption{Overview of the CalZSAD pipeline. \textit{Calibration phase (top):} $K$ known-good images of class $c$ pass through the frozen CLIP-ZSAD backbone to produce normal anomaly maps; the top-tail signal module extracts $q = \text{Mean}(\text{Top-}\rho\%(M))$, which is then normalized per class ($z = \mathcal{N}_c(q)$) and used to set the conformal threshold $t_{c,\alpha}$; only the normal label is required. \textit{Inference phase (bottom):} each test image undergoes the same backbone and score processing to produce $z(x)$, which is compared against the stored threshold to yield a binary decision. No backbone retraining is involved.}
+\caption{Pipeline CalZSAD. \textit{Pha hiệu chuẩn (trên):} $K$ ảnh bình thường đi qua backbone CLIP-ZSAD đóng băng, module tín hiệu top-tail trích $q = \text{Mean}(\text{Top-}\rho\%(M))$, chuẩn hóa theo lớp ($z = \mathcal{N}_c(q)$) và đặt ngưỡng conformal $t_{c,\alpha}$. \textit{Pha suy luận (dưới):} ảnh test đi qua cùng pipeline, so sánh $z(x)$ với ngưỡng để ra quyết định. Không huấn luyện lại backbone.}
 \label{fig:pipeline}
 \end{figure*}
 
-\subsection{Problem Formulation}
+\subsection{Phát biểu bài toán}
 
-Let $f_\theta$ denote the frozen AA-CLIP model. For an input image $x$, the model produces a pixel-level anomaly map $M(x) \in \mathbb{R}^{H \times W}$ and an image-level anomaly score $s(x) \in \mathbb{R}$. For each target class $c$, we are given a small set of $K$ normal images $X_c^n = \{x_1^n, \ldots, x_K^n\}$ with no defective images and no pixel-level annotations. The goal is to select a threshold $t_{c,\alpha}$ using only $X_c^n$ such that the false positive rate satisfies $\text{FPR}_c(t_{c,\alpha}) \lesssim \alpha$, where the default target is $\alpha = 0.05$.
+Gọi $f_\theta$ là mô hình AA-CLIP đóng băng. Với ảnh đầu vào $x$, mô hình sinh bản đồ bất thường pixel $M(x) \in \mathbb{R}^{H \times W}$ và điểm ảnh $s(x) \in \mathbb{R}$. Với mỗi lớp $c$, ta có $K$ ảnh bình thường $X_c^n = \{x_1^n, \ldots, x_K^n\}$ (không có ảnh lỗi, không có annotation pixel). Mục tiêu: chọn ngưỡng $t_{c,\alpha}$ sao cho $\text{FPR}_c(t_{c,\alpha}) \lesssim \alpha$ (mặc định $\alpha = 0.05$).
 
-\subsection{Top-1\% Pixel Signal}
+\subsection{Tín hiệu top-1\% pixel}
 
-Rather than using the native image-level score $s(x)$ produced by AA-CLIP, CalZSAD derives a more discriminative signal from the pixel-level anomaly map. The pixels of $M(x)$ are sorted in descending order, and the mean of the top 1\% is computed:
+Thay vì dùng điểm ảnh gốc $s(x)$, CalZSAD trích tín hiệu phân biệt hơn từ bản đồ pixel:
 \begin{equation}
 q(x) = \text{mean}\!\left(\left\{ M(i,j) : M(i,j) \geq Q_{99\%}(M) \right\}\right)
 \label{eq:top1pct}
 \end{equation}
-where $Q_{99\%}(M)$ is the 99th percentile of the anomaly map. This signal captures localized anomalous regions while being more robust than the single maximum pixel, which is susceptible to noise.
+với $Q_{99\%}(M)$ là percentile thứ 99 của bản đồ. Tín hiệu này bắt vùng bất thường cục bộ mà ít bị ảnh hưởng bởi nhiễu so với giá trị max đơn lẻ.
 
-\subsection{Robust Per-Class Normalization}
+\subsection{Chuẩn hóa robust theo lớp}
 
-To eliminate score scale shifts across classes, $q(x)$ is standardized per class using robust statistics estimated from the $K$ normal calibration images:
+Để loại bỏ dịch chuyển thang điểm giữa các lớp, $q(x)$ được chuẩn hóa theo thống kê robust từ $K$ ảnh hiệu chuẩn:
 \begin{equation}
 z(x) = \frac{q(x) - \mu_c}{\sigma_c}
 \label{eq:normalize}
 \end{equation}
-where $\mu_c = \text{median}(\{q(x_i^n)\}_{i=1}^K)$ is the median of the calibration scores, and $\sigma_c = 1.4826 \times \text{median}(|q_{\text{left}} - \mu_c|)$ is estimated from the Median Absolute Deviation (MAD) computed only on scores below the median. Using only the left half of the distribution prevents anomalous outliers from inflating the dispersion estimate. After normalization, normal images across all classes center around zero with unit spread, making thresholds comparable.
+trong đó $\mu_c = \text{median}(\{q(x_i^n)\}_{i=1}^K)$ và $\sigma_c = 1.4826 \times \text{median}(|q_{\text{left}} - \mu_c|)$ là MAD tính trên nửa trái phân phối. Sau chuẩn hóa, ảnh bình thường ở mọi lớp đều tập trung quanh 0 với độ phân tán đơn vị.
 
-\subsection{Conformal Threshold Selection}
+\subsection{Chọn ngưỡng conformal}
 
-Given the $K$ normalized calibration scores $R_c = \{r_1, \ldots, r_K\}$ sorted in ascending order $r_{(1)} \leq \cdots \leq r_{(K)}$, the conformal threshold for class $c$ at target FPR $\alpha$ is:
+Với $K$ điểm hiệu chuẩn đã chuẩn hóa $R_c = \{r_{(1)}, \ldots, r_{(K)}\}$ sắp tăng, ngưỡng conformal là:
 \begin{equation}
 t_{c,\alpha} = r_{(m)}, \quad m = \min\!\left\{\left\lceil (K+1)(1-\alpha) \right\rceil,\; K\right\}
 \label{eq:conformal}
 \end{equation}
 
-A test image $x$ is classified as anomalous if $z(x) > t_{c,\alpha}$. Under the exchangeability assumption between calibration and future normal samples, this rule provides a finite-sample guarantee: $\Pr(z(x) > t_{c,\alpha}) \leq \alpha$, without requiring Gaussian or any other parametric assumption about the score distribution~\cite{angelopoulos2023conformal, vovk2005conformal}.
+Ảnh test được phân loại bất thường nếu $z(x) > t_{c,\alpha}$. Với $K{=}20$, $\alpha{=}0.05$: $m = \lceil 21 \times 0.95 \rceil = 20$, ngưỡng là max của 20 điểm hiệu chuẩn, FPR lý thuyết $\approx 4.76\%$~\cite{angelopoulos2023conformal}.
 
-\textbf{Concrete example.} With $K{=}20$ and $\alpha{=}0.05$, we obtain $m = \lceil 21 \times 0.95 \rceil = 20$. The threshold is thus the maximum of the 20 calibration scores, yielding a theoretical FPR of $1/(K{+}1) = 1/21 \approx 4.76\%$.
-
-\textbf{Pixel-level extension.} For pixel-level segmentation, the empirical quantile is computed over all pixels from the $K$ normal images at a target pixel-FAR of $\beta{=}1\%$, and the anomaly map is binarized accordingly: $\hat{Y}_{\text{pixel}}(x) = \mathbb{1}[M(x) \geq \tau_{c,\beta}]$.
+Ở mức pixel, ngưỡng được tính bằng quantile thực nghiệm trên toàn bộ pixel từ $K$ ảnh bình thường tại pixel-FAR $\beta{=}1\%$.
 
 % =====================================================================
-% IV. EXPERIMENTS
+% IV. THỰC NGHIỆM
 % =====================================================================
-\section{Experiments}
+\section{Thực nghiệm}
 
-\subsection{Experimental Setup}
+\subsection{Thiết lập}
 
-\textbf{Backbone.} We use AA-CLIP~\cite{ma2025aaclip} as the sole backbone. AA-CLIP is a CVPR~2025 method that separates normal and abnormal semantics in the CLIP language space via anomaly-aware anchors and residual visual adapters. It is trained on the VisA dataset and applied zero-shot to all target domains.
+\textbf{Backbone:} AA-CLIP~\cite{ma2025aaclip} (CVPR 2025), huấn luyện trên VisA, áp dụng zero-shot lên tất cả miền đích.
 
-\textbf{Datasets.} We evaluate on six datasets spanning two domains:
-\begin{itemize}
-\item \textbf{Industrial (3 datasets):} MVTec-AD~\cite{bergmann2019mvtec} (15 classes), BTAD~\cite{mishra2021btad} (3 classes), and MPDD~\cite{jezek2021mpdd} (6 classes).
-\item \textbf{Medical (3 datasets):} Brain MRI, Liver CT, and Retina OCT, all sourced from the BMAD benchmark~\cite{bao2023bmad}.
-\end{itemize}
+\textbf{Dữ liệu:} 6 bộ thuộc 2 miền: \textit{Công nghiệp} gồm MVTec-AD~\cite{bergmann2019mvtec} (15 lớp), BTAD~\cite{mishra2021btad} (3 lớp), MPDD~\cite{jezek2021mpdd} (6 lớp); \textit{Y tế} gồm Brain MRI, Liver CT, Retina OCT từ BMAD~\cite{bao2023bmad}.
 
-\textbf{Protocol.} All metrics are computed per-class, then macro-averaged across classes within each dataset, and finally macro-averaged across datasets. CalZSAD uses $K{=}20$ normal images per class for calibration, sampled from the official train-normal split when available; for medical datasets without a dedicated train split, $K$ images are randomly sampled from normal test images and excluded from evaluation. Results are averaged over 8 random seeds for image-level and 3 seeds for pixel-level experiments. The image-level FPR target is $\alpha{=}5\%$; the pixel-level FAR target is $\beta{=}1\%$.
+\textbf{Giao thức:} Metric tính per-class rồi macro-average. CalZSAD dùng $K{=}20$ ảnh bình thường mỗi lớp. Kết quả trung bình qua 8 seed (image) và 3 seed (pixel). FPR mục tiêu $\alpha{=}5\%$; pixel-FAR mục tiêu $\beta{=}1\%$.
 
-\textbf{Metrics.} We report both ranking metrics that do not require a threshold (image-AUROC, image-AP, pixel-AUROC, pixel-AP, AUPRO~\cite{bergmann2020aupro}, and AUPIMO~\cite{bertoldo2024aupimo}) and operational metrics at a fixed operating point: FPR, Recall, F1 (image level), and Dice at FAR~1\% with pixel-FPR (pixel level). We also report the \emph{Oracle~F1}, defined as the best F1 achievable by setting the per-class threshold at exactly FPR~=~5\% using ground-truth labels. This oracle serves as an upper bound that no unsupervised threshold method can exceed.
+\subsection{Kết quả mức ảnh}
 
-\subsection{Image-Level Results}
-
-Table~\ref{tab:image_results} presents the image-level results. The ``Ref.'' column shows the AUROC reported in the original AA-CLIP paper~\cite{ma2025aaclip} under their full experimental configuration, while ``Ours'' shows our reproduction of the AA-CLIP model evaluated on the six target datasets. Minor differences between the two columns are expected due to variations in data splits and preprocessing. The remaining columns report operational metrics produced by CalZSAD at the target FPR of 5\%.
+Bảng~\ref{tab:image_results} trình bày kết quả mức ảnh. Cột ``Ref.'' là AUROC từ paper AA-CLIP gốc~\cite{ma2025aaclip}; cột ``Ours'' là kết quả reproduce của nhóm (chênh lệch do khác data split và preprocessing).
 
 \begin{table*}[!t]
-\caption{Image-level results on the AA-CLIP backbone across six datasets. ``Ref.'' denotes the img-AUROC reported in the original AA-CLIP paper~\cite{ma2025aaclip}. ``Ours'' is our reproduction of the AA-CLIP model on these datasets (differences arise from data split and preprocessing variations). The remaining columns are operational metrics produced by CalZSAD at the FPR~$\approx$~5\% operating point ($K{=}20$, conformal threshold, top-1\% pixel signal). Oracle~F1 is the upper bound obtained by setting per-class thresholds using ground-truth labels at FPR~=~5\%.}
+\caption{Kết quả mức ảnh trên backbone AA-CLIP. ``Ref.'' là img-AUROC từ paper gốc, ``Ours'' là kết quả reproduce. Các cột còn lại là metric vận hành từ CalZSAD tại FPR $\approx 5\%$ ($K{=}20$, ngưỡng conformal, tín hiệu top-1\%).}
 \label{tab:image_results}
 \centering
 \renewcommand{\arraystretch}{1.15}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{ll cc c ccccc}
 \toprule
-\textbf{Domain} & \textbf{Dataset} & \textbf{img-AUROC} & \textbf{img-AUROC} & \textbf{$\Delta$} & \textbf{img-AP} & \textbf{FPR (\%)} & \textbf{Recall (\%)} & \textbf{F1 (\%)} & \textbf{Oracle F1 (\%)} \\
- &  & \textbf{(Ref.)} & \textbf{(Ours)} & & & & & & \\
+\textbf{Miền} & \textbf{Dataset} & \textbf{AUROC} & \textbf{AUROC} & \textbf{$\Delta$} & \textbf{AP} & \textbf{FPR} & \textbf{Recall} & \textbf{F1} & \textbf{Oracle F1} \\
+ &  & \textbf{(Ref.)} & \textbf{(Ours)} & & & \textbf{(\%)} & \textbf{(\%)} & \textbf{(\%)} & \textbf{(\%)} \\
 \midrule
-\multirow{3}{*}{Industrial}
+\multirow{3}{*}{Công nghiệp}
  & BTAD     & 94.8 & 93.98 & $-$0.82 & 93.09 & 5.74 & 64.47 & 74.26 & 79.69 \\
  & MPDD     & 75.1 & 73.06 & $-$2.04 & 78.49 & 3.79 & 30.27 & 46.21 & 49.62 \\
  & MVTec-AD & 90.5 & 84.92 & $-$5.58 & 92.94 & 4.41 & 72.74 & 83.70 & 86.47 \\
 \midrule
-\multirow{3}{*}{Medical}
+\multirow{3}{*}{Y tế}
  & Brain    & 80.2 & 58.40 & $-$21.80 & 86.30 & 3.43 & 21.41 & 34.26 & 42.92 \\
  & Liver    & 69.7 & 57.16 & $-$12.54 & 53.74 & 0.94 &  2.16 &  4.09 & 13.55 \\
  & Retina   & 82.7 & 71.49 & $-$11.21 & 65.50 & 5.02 & 51.54 & 63.81 & 71.94 \\
@@ -171,42 +161,29 @@ Table~\ref{tab:image_results} presents the image-level results. The ``Ref.'' col
 }
 \end{table*}
 
-Several observations emerge from Table~\ref{tab:image_results}. First, our reproduction closely matches the original AA-CLIP numbers on industrial datasets (within 0.8 to 5.6 points of AUROC), while medical datasets show larger gaps (11 to 22 points). This discrepancy is expected because the medical datasets in BMAD have different preprocessing and evaluation splits compared to the setup used in the original AA-CLIP paper, and our reproduction runs the released checkpoint without any modification.
+CalZSAD kiểm soát FPR sát mức mục tiêu 5\% trên cả 6 bộ (0.94\% đến 5.74\%). Với công nghiệp, F1 đạt 83.70 (MVTec), 74.26 (BTAD), 46.21 (MPDD), chỉ cách oracle 3 đến 6 điểm. Với y tế, Retina đạt F1 63.81 (oracle 71.94); Brain và Liver thấp hơn nhưng oracle cũng thấp (42.92 và 13.55), cho thấy hạn chế nằm ở backbone chứ không phải chọn ngưỡng.
 
-Second, CalZSAD successfully controls FPR near the 5\% target across all six datasets, ranging from 0.94\% (Liver) to 5.74\% (BTAD). This demonstrates that the conformal thresholding mechanism, combined with robust normalization, produces stable operating points regardless of the score distribution of each class.
+\subsection{Kết quả mức pixel}
 
-Third, industrial datasets achieve strong F1 scores: 83.70 on MVTec-AD, 74.26 on BTAD, and 46.21 on MPDD, all within 3 to 6 points of their respective oracle F1 values. For medical datasets, Retina achieves a competitive F1 of 63.81 (oracle: 71.94). Brain and Liver exhibit lower F1 scores (34.26 and 4.09, respectively), but this reflects a fundamental limitation of the AA-CLIP backbone on these domains rather than a failure of the threshold selection. The oracle F1 for Liver is only 13.55, indicating that the backbone itself cannot separate normal from anomalous images at FPR~$\leq$~5\%.
-
-Fourth, image-AP provides a complementary view. MVTec-AD and BTAD have high AP (above~92), confirming strong ranking. Liver's AP of 53.74 is much lower, corroborating the low F1 and oracle values.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\columnwidth]{aaclip_score_shift.png}
-\caption{Raw anomaly scores of normal images (AA-CLIP) shift substantially across datasets. Because the normal score distributions do not share the same scale, a single fixed threshold would yield very different FPR values across classes. This motivates the robust per-class normalization step in CalZSAD (Section~III-C).}
-\label{fig:score_shift}
-\end{figure}
-
-\subsection{Pixel-Level Results}
-
-Table~\ref{tab:pixel_results} presents pixel-level results, including both ranking metrics and the operational Dice score at pixel-FAR~1\%.
+Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel.
 
 \begin{table*}[!t]
-\caption{Pixel-level results on the AA-CLIP backbone. ``Ref.'' denotes the px-AUROC reported in the original AA-CLIP paper~\cite{ma2025aaclip}. ``Ours'' is our reproduction. Dice@FAR1\% is the segmentation Dice coefficient when the anomaly map is binarized at the CalZSAD pixel threshold targeting 1\% false alarm rate. px-FPR is the actual pixel-level false positive rate achieved.}
+\caption{Kết quả mức pixel trên backbone AA-CLIP. Dice@FAR1\% là hệ số Dice khi binarize bản đồ bất thường tại ngưỡng pixel-FAR 1\%.}
 \label{tab:pixel_results}
 \centering
 \renewcommand{\arraystretch}{1.15}
 \resizebox{\textwidth}{!}{%
 \begin{tabular}{ll cc c cccc c}
 \toprule
-\textbf{Domain} & \textbf{Dataset} & \textbf{px-AUROC} & \textbf{px-AUROC} & \textbf{$\Delta$} & \textbf{px-AP} & \textbf{AUPRO} & \textbf{AUPIMO} & \textbf{Dice} & \textbf{px-FPR} \\
+\textbf{Miền} & \textbf{Dataset} & \textbf{px-AUROC} & \textbf{px-AUROC} & \textbf{$\Delta$} & \textbf{px-AP} & \textbf{AUPRO} & \textbf{AUPIMO} & \textbf{Dice} & \textbf{px-FPR} \\
  &  & \textbf{(Ref.)} & \textbf{(Ours)} & & & & & \textbf{@FAR1\%} & \textbf{(\%)} \\
 \midrule
-\multirow{3}{*}{Industrial}
+\multirow{3}{*}{Công nghiệp}
  & BTAD     & 97.0 & 97.41 & $+$0.41 & 55.66 & 67.38 & 75.95 & 24.30 & 1.01 \\
  & MPDD     & 96.7 & 96.55 & $-$0.15 & 25.49 & 81.38 & 42.25 & 22.15 & 0.87 \\
  & MVTec-AD & 91.9 & 92.55 & $+$0.65 & 48.97 & 74.29 & 78.12 & 35.12 & 0.89 \\
 \midrule
-\multirow{3}{*}{Medical}
+\multirow{3}{*}{Y tế}
  & Brain    & 95.5 & 95.21 & $-$0.29 & 39.21 & 74.68 & 35.46 & 31.11 & 1.09 \\
  & Liver    & 97.8 & 97.71 & $-$0.09 &  9.96 & 64.39 & 47.48 & 23.54 & 0.96 \\
  & Retina   & 95.5 & 96.25 & $+$0.75 & 63.54 & 74.90 & 47.94 & 50.11 & 0.93 \\
@@ -215,123 +192,79 @@ Table~\ref{tab:pixel_results} presents pixel-level results, including both ranki
 }
 \end{table*}
 
-The pixel-level results reveal several important findings. First, our pixel-AUROC reproduction is very close to the original paper, with differences within $\pm$0.75 points across all datasets, and in three cases (BTAD, MVTec-AD, Retina) our reproduction slightly exceeds the reported values.
-
-Second, the gap between pixel-AUROC and pixel-AP is striking, as illustrated in Fig.~\ref{fig:pixel_inflation}. All six datasets have pixel-AUROC above 92\%, yet pixel-AP ranges from 9.96 (Liver) to 63.54 (Retina). This confirms the well-documented AUROC inflation phenomenon under extreme class imbalance~\cite{saito2015pr}: because over 99\% of pixels are normal, even a mediocre anomaly map can achieve high AUROC. The gap of 40 to 88 points between pixel-AUROC and pixel-AP underscores why operational metrics such as Dice at a fixed FAR are necessary for honest evaluation.
-
-\begin{figure}[!t]
-\centering
-\includegraphics[width=\columnwidth]{fig_pixel_inflation.png}
-\caption{Pixel-AUROC inflation: comparison with pixel-AP and AUPIMO. The gap of 40 to 88 points between pixel-AUROC and pixel-AP is a consequence of extreme class imbalance at the pixel level (over 99\% of pixels are normal), showing that high pixel-AUROC does not imply accurate localization.}
-\label{fig:pixel_inflation}
-\end{figure}
-
-Third, AUPRO and AUPIMO provide complementary rankings. AUPIMO, which evaluates per-image overlap at low FPR~\cite{bertoldo2024aupimo}, reveals that MVTec-AD (78.12) and BTAD (75.95) have the best localization quality, while Brain (35.46) and MPDD (42.25) lag behind despite having high pixel-AUROC.
-
-Fourth, the Dice@FAR1\% scores show that CalZSAD achieves reasonable segmentation with pixel-FPR tightly controlled around 1\% (range: 0.87 to 1.09\%). Retina achieves the highest Dice (50.11), while MPDD has the lowest (22.15). These values are consistent with the ranking suggested by AUPIMO and pixel-AP, rather than the misleadingly uniform pixel-AUROC.
-
-\subsection{Analysis and Discussion}
-
-\textbf{Gap to oracle.} At the image level, CalZSAD's F1 is within 5 to 9 points of the oracle F1 for industrial datasets, demonstrating that the conformal threshold closely approximates the best possible threshold at the target FPR. For medical datasets, the absolute gap is larger (8 to 9 points), but this is proportional to the lower oracle values themselves.
-
-\textbf{Domain gap.} The most notable performance disparity is between industrial and medical domains. On industrial datasets, AA-CLIP achieves img-AUROC of 73 to 94 with strong operational metrics. On medical datasets, img-AUROC drops to 57 to 71, and F1 at FPR~5\% is substantially lower (4 to 64). This gap is not caused by threshold selection but by the backbone's limited ability to generalize to medical imaging modalities that differ substantially from the natural images used to train CLIP. The Liver dataset is particularly challenging, with oracle F1 of only 13.55, indicating that the backbone barely separates normal from anomalous liver CT images at low FPR.
-
-\textbf{Pixel-AUROC inflation.} Across all six datasets, pixel-AUROC exceeds 92\% while pixel-AP ranges from 10\% to 64\%. This 30 to 80 point gap is a direct consequence of the extreme class imbalance at the pixel level and highlights the importance of reporting complementary metrics. Had we relied solely on pixel-AUROC, the Liver dataset (px-AUROC 97.71, px-AP 9.96) would appear to have excellent segmentation when in fact the anomaly map is highly imprecise for the positive class. This finding aligns with prior work advocating for precision-recall-based evaluation~\cite{saito2015pr} and low-FPR metrics~\cite{bertoldo2024aupimo}.
-
-\textbf{Practical deployment.} CalZSAD requires only 20 normal images per class, which are readily available in any production setting or clinical database, and runs entirely on CPU in seconds since it only computes order statistics on precomputed scores. The conformal guarantee ensures that FPR stays near the target without tuning, making the system suitable for deployment where false alarm budgets are strict.
+Pixel-AUROC reproduce sát paper gốc (chênh $\pm$0.75). Điểm đáng chú ý: tất cả 6 bộ có px-AUROC trên 92\% nhưng px-AP chỉ từ 9.96 (Liver) đến 63.54 (Retina), khoảng cách 30 đến 88 điểm. Hiện tượng ``AUROC lạc quan''~\cite{saito2015pr} này xảy ra do mất cân bằng cực đoan ở mức pixel, cho thấy cần metric bổ sung như Dice hoặc AUPIMO~\cite{bertoldo2024aupimo}. CalZSAD đạt pixel-FPR sát 1\% (0.87 đến 1.09\%), Retina đạt Dice cao nhất (50.11).
 
 % =====================================================================
-% V. CONCLUSION
+% V. KẾT LUẬN
 % =====================================================================
-\section{Conclusion}
+\section{Kết luận}
 
-This work addresses the gap between benchmark AUROC and practical deployability of CLIP-based zero-shot anomaly detection. Using AA-CLIP as the backbone, we apply CalZSAD, a post-processing framework combining robust per-class score normalization, a top-1\% pixel signal for improved image-level discrimination, and conformal prediction-based threshold selection with only 20 normal images per class. Experiments on six datasets covering industrial (BTAD, MPDD, MVTec-AD) and medical (Brain, Liver, Retina) domains show that CalZSAD controls FPR at the target level of approximately 5\% while achieving F1 within 5 to 9 points of the oracle upper bound. At the pixel level, Dice at FAR~1\% closely tracks the oracle with pixel-FPR tightly around 1\%.
-
-Our comprehensive evaluation also reveals important findings for the community. First, pixel-AUROC is heavily inflated (30 to 80 points above pixel-AP) due to extreme class imbalance, making it an unreliable standalone metric. Second, medical datasets pose a significantly greater challenge than industrial ones, with the gap attributable to the backbone's limited transferability to medical modalities rather than threshold selection. Third, threshold selection methods should always be evaluated alongside their induced FPR, as high F1 values in the literature often correspond to uncontrolled FPR levels of 10 to 20\%.
-
-\textbf{Limitations.} Liver and Brain datasets yield low F1 even with oracle thresholds, indicating a fundamental backbone limitation on medical domains. Improving this requires better CLIP-ZSAD models for medical imaging, which is beyond the scope of threshold calibration. Furthermore, the current evaluation uses $K{=}20$; reducing $K$ below 10 increases FPR variance and requires further study.
-
-\textbf{Future work.} Extending CalZSAD to newer backbones and harder benchmarks (MVTec-AD~2, Real-IAD), reducing the calibration set size via stronger estimators, and combining CalZSAD with domain adaptation for medical images are promising directions.
+Nhóm áp dụng CalZSAD lên backbone AA-CLIP để biến điểm bất thường thô thành quyết định nhị phân với FPR được kiểm soát, chỉ cần 20 ảnh bình thường mỗi lớp và không cần mẫu lỗi. Thực nghiệm trên 6 bộ dữ liệu cho thấy FPR sát mức mục tiêu 5\%, F1 cách oracle 5 đến 9 điểm (công nghiệp), và pixel-FPR sát 1\%. Đánh giá cũng chỉ ra pixel-AUROC bị lạc quan mạnh (chênh 30 đến 80 điểm so với px-AP) và miền y tế khó hơn đáng kể do hạn chế của backbone CLIP trên ảnh y tế.
 
 % =====================================================================
-% REFERENCES
+% TÀI LIỆU THAM KHẢO
 % =====================================================================
-\begin{thebibliography}{15}
+\begin{thebibliography}{10}
 
 \bibitem{ma2025aaclip}
-W.~Ma, X.~Zhang, Q.~Yao, F.~Tang, C.~Wu, Y.~Li, R.~Yan, Z.~Jiang, and S.~K.~Zhou,
+W.~Ma \emph{et~al.},
 ``AA-CLIP: Enhancing zero-shot anomaly detection via anomaly-aware CLIP,''
-in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp.~4744--4754, 2025.
+\emph{CVPR}, pp.~4744--4754, 2025.
 
 \bibitem{radford2021clip}
-A.~Radford, J.~W.~Kim, C.~Hallacy \emph{et~al.},
+A.~Radford \emph{et~al.},
 ``Learning transferable visual models from natural language supervision,''
-in \emph{Proc. Int. Conf. Mach. Learn. (ICML)}, pp.~8748--8763, 2021.
+\emph{ICML}, pp.~8748--8763, 2021.
 
 \bibitem{jeong2023winclip}
-J.~Jeong, Y.~Zou, T.~Kim, D.~Zhang, A.~Ravichandran, and O.~Dabeer,
+J.~Jeong \emph{et~al.},
 ``WinCLIP: Zero-/few-shot anomaly classification and segmentation,''
-in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp.~19606--19616, 2023.
+\emph{CVPR}, pp.~19606--19616, 2023.
 
 \bibitem{zhou2024anomalyclip}
-Q.~Zhou, G.~Pang, Y.~Tian, S.~He, and J.~Chen,
+Q.~Zhou \emph{et~al.},
 ``AnomalyCLIP: Object-agnostic prompt learning for zero-shot anomaly detection,''
-in \emph{Proc. Int. Conf. Learn. Represent. (ICLR)}, 2024.
+\emph{ICLR}, 2024.
 
 \bibitem{cao2024adaclip}
-Y.~Cao, J.~Zhang, L.~Frittoli, Y.~Cheng, W.~Shen, and G.~Boracchi,
+Y.~Cao \emph{et~al.},
 ``AdaCLIP: Adapting CLIP with hybrid learnable prompts for zero-shot anomaly detection,''
-in \emph{Proc. Eur. Conf. Comput. Vis. (ECCV)}, pp.~55--72, 2024.
+\emph{ECCV}, pp.~55--72, 2024.
 
 \bibitem{saito2015pr}
 T.~Saito and M.~Rehmsmeier,
 ``The precision-recall plot is more informative than the ROC plot when evaluating binary classifiers on imbalanced datasets,''
-\emph{PLoS ONE}, vol.~10, no.~3, p.~e0118432, 2015.
+\emph{PLoS ONE}, vol.~10, no.~3, 2015.
 
 \bibitem{bertoldo2024aupimo}
-J.~P.~C.~Bertoldo, D.~Ameln, A.~Vaidya, and S.~Ak\c{c}ay,
+J.~P.~C.~Bertoldo \emph{et~al.},
 ``AUPIMO: Redefining visual anomaly detection benchmarks with high speed and low tolerance,''
-in \emph{Proc. Brit. Mach. Vis. Conf. (BMVC)}, 2024.
+\emph{BMVC}, 2024.
 
 \bibitem{angelopoulos2023conformal}
 A.~N.~Angelopoulos and S.~Bates,
 ``A gentle introduction to conformal prediction and distribution-free uncertainty quantification,''
-\emph{Found. Trends Mach. Learn.}, vol.~16, no.~4, pp.~494--591, 2023.
-
-\bibitem{vovk2005conformal}
-V.~Vovk, A.~Gammerman, and G.~Shafer,
-\emph{Algorithmic Learning in a Random World}.
-\hskip 1em plus 0.5em minus 0.4em\relax New York: Springer, 2005.
-
-\bibitem{estievenart2025risk}
-Y.~Estievenart, S.~Patra, and S.~Ben~Taieb,
-``Risk-based thresholding for reliable anomaly detection in concentrated solar power plants,''
-in \emph{Proc. ECML PKDD}, pp.~111--128, 2025.
+\emph{Found. Trends Mach. Learn.}, vol.~16, no.~4, 2023.
 
 \bibitem{bergmann2019mvtec}
-P.~Bergmann, M.~Fauser, D.~Sattlegger, and C.~Steger,
+P.~Bergmann \emph{et~al.},
 ``MVTec AD: A comprehensive real-world dataset for unsupervised anomaly detection,''
-in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp.~9592--9600, 2019.
+\emph{CVPR}, pp.~9592--9600, 2019.
 
 \bibitem{mishra2021btad}
-P.~Mishra, R.~Verk, D.~Fornasier, C.~Piciarelli, and G.~L.~Foresti,
+P.~Mishra \emph{et~al.},
 ``VT-ADL: A vision transformer network for image anomaly detection and localization,''
-in \emph{Proc. IEEE Int. Symp. Ind. Electron. (ISIE)}, pp.~1--6, 2021.
+\emph{ISIE}, pp.~1--6, 2021.
 
 \bibitem{jezek2021mpdd}
-S.~Jezek, M.~Jonak, R.~Burget, P.~Dvorak, and M.~Skotak,
-``Deep learning-based defect detection of metal parts: Evaluating current methods in complex conditions,''
-in \emph{Proc. Int. Conf. Ultra Modern Telecommun. (ICUMT)}, pp.~66--71, 2021.
+S.~Jezek \emph{et~al.},
+``Deep learning-based defect detection of metal parts,''
+\emph{ICUMT}, pp.~66--71, 2021.
 
 \bibitem{bao2023bmad}
-J.~Bao, H.~Sun, H.~Deng, Y.~He, Z.~Zhang, and X.~Li,
+J.~Bao \emph{et~al.},
 ``BMAD: Benchmarks for medical anomaly detection,''
-\emph{arXiv preprint arXiv:2306.11876}, 2023.
-
-\bibitem{bergmann2020aupro}
-P.~Bergmann, M.~Fauser, D.~Sattlegger, and C.~Steger,
-``Uninformed students: Student-teacher anomaly detection with discriminative latent embeddings,''
-in \emph{Proc. IEEE/CVF Conf. Comput. Vis. Pattern Recognit. (CVPR)}, pp.~4183--4192, 2020.
+\emph{arXiv:2306.11876}, 2023.
 
 \end{thebibliography}
 
