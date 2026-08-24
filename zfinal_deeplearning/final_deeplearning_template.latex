@@ -1,6 +1,6 @@
 %% Final Report - Deep Learning (CS2230.CH202)
 %% Viết tiếng Việt, rút ngắn theo yêu cầu thầy.
-%% Compile: pdfLaTeX (2 lần để resolve references).
+%% Compile: xelatex (2 lần).
 
 \documentclass[journal]{IEEEtran}
 
@@ -10,7 +10,7 @@
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{multirow}
-\usepackage{cite}
+\usepackage{float}
 \usepackage{url}
 
 \hyphenation{anom-aly}
@@ -52,9 +52,9 @@ Phát hiện bất thường zero-shot, CLIP, AA-CLIP, conformal prediction, ch�
 % =====================================================================
 \section{Giới thiệu}
 
-Phát hiện bất thường nhằm nhận diện các mẫu lệch khỏi phân phối bình thường, ứng dụng rộng rãi từ kiểm tra chất lượng sản xuất~\cite{bergmann2019mvtec} đến sàng lọc hình ảnh y tế~\cite{bao2023bmad}. Vì mẫu lỗi hiếm và đa dạng, các phương pháp giám sát đòi hỏi bộ dữ liệu lỗi lớn là không thực tế; do đó các hướng tiếp cận unsupervised và zero-shot chỉ học từ dữ liệu bình thường được quan tâm nhiều.
+Phát hiện bất thường nhằm nhận diện các mẫu lệch khỏi phân phối bình thường, ứng dụng rộng rãi từ kiểm tra chất lượng sản xuất (MVTec-AD, BTAD) đến sàng lọc hình ảnh y tế (BMAD). Vì mẫu lỗi hiếm và đa dạng, các phương pháp giám sát đòi hỏi bộ dữ liệu lỗi lớn là không thực tế; do đó các hướng tiếp cận unsupervised và zero-shot chỉ học từ dữ liệu bình thường được quan tâm nhiều.
 
-Mô hình vision-language CLIP~\cite{radford2021clip} mở ra hướng zero-shot anomaly detection (ZSAD) phát hiện lỗi trên lớp sản phẩm hoàn toàn mới mà không cần dữ liệu huấn luyện riêng. WinCLIP~\cite{jeong2023winclip} dùng prompt thủ công kết hợp multi-scale windowing. AnomalyCLIP~\cite{zhou2024anomalyclip} học prompt không phụ thuộc tên lớp. AdaCLIP~\cite{cao2024adaclip} kết hợp prompt tĩnh và động. AA-CLIP~\cite{ma2025aaclip} (CVPR 2025) tách ngữ nghĩa bình thường/bất thường trong không gian ngôn ngữ trước khi căn chỉnh đặc trưng ảnh, đạt AUROC cao nhất trên nhiều benchmark. Tuy nhiên, tất cả các phương pháp này chỉ sinh ra điểm bất thường liên tục mà \emph{không cung cấp ngưỡng quyết định}. Trong thực tế, hệ thống cần ra quyết định nhị phân ``bình thường'' hay ``bất thường'', và quyết định này phụ thuộc rất lớn vào ngưỡng.
+Mô hình vision-language CLIP (Radford et al., 2021) mở ra hướng zero-shot anomaly detection (ZSAD) phát hiện lỗi trên lớp sản phẩm hoàn toàn mới mà không cần dữ liệu huấn luyện riêng. WinCLIP (Jeong et al., 2023) dùng prompt thủ công kết hợp multi-scale windowing. AnomalyCLIP (Zhou et al., 2024) học prompt không phụ thuộc tên lớp. AdaCLIP (Cao et al., 2024) kết hợp prompt tĩnh và động. AA-CLIP (Ma et al., CVPR 2025) tách ngữ nghĩa bình thường/bất thường trong không gian ngôn ngữ trước khi căn chỉnh đặc trưng ảnh, đạt AUROC cao nhất trên nhiều benchmark. Tuy nhiên, tất cả các phương pháp này chỉ sinh ra điểm bất thường liên tục mà \emph{không cung cấp ngưỡng quyết định}. Trong thực tế, hệ thống cần ra quyết định nhị phân ``bình thường'' hay ``bất thường'', và quyết định này phụ thuộc rất lớn vào ngưỡng.
 
 Nhóm áp dụng CalZSAD, một module hậu xử lý nhẹ gắn trên backbone AA-CLIP đã đóng băng, gồm ba thành phần: (i) thay điểm ảnh gốc bằng trung bình top-1\% pixel cao nhất từ bản đồ bất thường; (ii) chuẩn hóa robust theo lớp bằng median và MAD; (iii) chọn ngưỡng conformal chỉ cần $K{=}20$ ảnh bình thường mỗi lớp, đảm bảo FPR $\leq \alpha$ mà không cần giả định phân phối. Pipeline này không huấn luyện lại backbone và áp dụng được cho mọi mô hình CLIP-ZSAD.
 
@@ -65,11 +65,11 @@ Nhóm áp dụng CalZSAD, một module hậu xử lý nhẹ gắn trên backbone
 % =====================================================================
 \section{Công trình liên quan}
 
-Các phương pháp CLIP-ZSAD hiện tại (WinCLIP~\cite{jeong2023winclip}, AnomalyCLIP~\cite{zhou2024anomalyclip}, AdaCLIP~\cite{cao2024adaclip}, AA-CLIP~\cite{ma2025aaclip}) đều tập trung tối ưu chất lượng ranking (AUROC) nhưng không giải quyết bài toán chọn ngưỡng. AA-CLIP là phương pháp mạnh nhất nhờ tách ngữ nghĩa bất thường trong không gian ngôn ngữ, nhưng vẫn chỉ sinh ra điểm liên tục.
+Các phương pháp CLIP-ZSAD hiện tại (WinCLIP, AnomalyCLIP, AdaCLIP, AA-CLIP) đều tập trung tối ưu chất lượng ranking (AUROC) nhưng không giải quyết bài toán chọn ngưỡng. AA-CLIP là phương pháp mạnh nhất nhờ tách ngữ nghĩa bất thường trong không gian ngôn ngữ, nhưng vẫn chỉ sinh ra điểm liên tục.
 
-Về đánh giá, pixel-AUROC bị lạc quan mạnh khi dữ liệu mất cân bằng (trên 99\% pixel bình thường)~\cite{saito2015pr}. AUPIMO~\cite{bertoldo2024aupimo} đánh giá overlap tại FPR thấp, cho thước đo sát thực tế hơn.
+Về đánh giá, pixel-AUROC bị lạc quan mạnh khi dữ liệu mất cân bằng (trên 99\% pixel bình thường) (Saito \& Rehmsmeier, 2015). AUPIMO (Bertoldo et al., 2024) đánh giá overlap tại FPR thấp, cho thước đo sát thực tế hơn.
 
-Về chọn ngưỡng, phương pháp Otsu không ổn định khi phân phối chồng lấn; Peaks-Over-Threshold (POT) dựa trên lý thuyết giá trị cực trị nhưng nhạy với ngoại lai. Conformal prediction~\cite{angelopoulos2023conformal} đảm bảo FPR $\leq \alpha$ với mẫu hữu hạn mà không cần giả định phân phối. Điểm khác biệt chính của CalZSAD so với các phương pháp trên là kết hợp chuẩn hóa robust theo lớp trước khi áp dụng conformal, giúp ngưỡng so sánh được giữa các lớp và miền dữ liệu khác nhau.
+Về chọn ngưỡng, phương pháp Otsu không ổn định khi phân phối chồng lấn; Peaks-Over-Threshold (POT) dựa trên lý thuyết giá trị cực trị nhưng nhạy với ngoại lai. Conformal prediction (Angelopoulos \& Bates, 2023) đảm bảo FPR $\leq \alpha$ với mẫu hữu hạn mà không cần giả định phân phối. Điểm khác biệt chính của CalZSAD so với các phương pháp trên là kết hợp chuẩn hóa robust theo lớp trước khi áp dụng conformal, giúp ngưỡng so sánh được giữa các lớp và miền dữ liệu khác nhau.
 
 % =====================================================================
 % III. PHƯƠNG PHÁP ĐỀ XUẤT
@@ -115,7 +115,7 @@ t_{c,\alpha} = r_{(m)}, \quad m = \min\!\left\{\left\lceil (K+1)(1-\alpha) \righ
 \label{eq:conformal}
 \end{equation}
 
-Ảnh test được phân loại bất thường nếu $z(x) > t_{c,\alpha}$. Với $K{=}20$, $\alpha{=}0.05$: $m = \lceil 21 \times 0.95 \rceil = 20$, ngưỡng là max của 20 điểm hiệu chuẩn, FPR lý thuyết $\approx 4.76\%$~\cite{angelopoulos2023conformal}.
+Ảnh test được phân loại bất thường nếu $z(x) > t_{c,\alpha}$. Với $K{=}20$, $\alpha{=}0.05$: $m = \lceil 21 \times 0.95 \rceil = 20$, ngưỡng là max của 20 điểm hiệu chuẩn, FPR lý thuyết $\approx 4.76\%$ (Angelopoulos \& Bates, 2023).
 
 Ở mức pixel, ngưỡng được tính bằng quantile thực nghiệm trên toàn bộ pixel từ $K$ ảnh bình thường tại pixel-FAR $\beta{=}1\%$.
 
@@ -126,15 +126,15 @@ t_{c,\alpha} = r_{(m)}, \quad m = \min\!\left\{\left\lceil (K+1)(1-\alpha) \righ
 
 \subsection{Thiết lập}
 
-\textbf{Backbone:} AA-CLIP~\cite{ma2025aaclip} (CVPR 2025), huấn luyện trên VisA, áp dụng zero-shot lên tất cả miền đích.
+\textbf{Backbone:} AA-CLIP (Ma et al., CVPR 2025), huấn luyện trên VisA, áp dụng zero-shot lên tất cả miền đích.
 
-\textbf{Dữ liệu:} 6 bộ thuộc 2 miền: \textit{Công nghiệp} gồm MVTec-AD~\cite{bergmann2019mvtec} (15 lớp), BTAD~\cite{mishra2021btad} (3 lớp), MPDD~\cite{jezek2021mpdd} (6 lớp); \textit{Y tế} gồm Brain MRI, Liver CT, Retina OCT từ BMAD~\cite{bao2023bmad}.
+\textbf{Dữ liệu:} 6 bộ thuộc 2 miền: \textit{Công nghiệp} gồm MVTec-AD (15 lớp), BTAD (3 lớp), MPDD (6 lớp); \textit{Y tế} gồm Brain MRI, Liver CT, Retina OCT từ BMAD.
 
 \textbf{Giao thức:} Metric tính per-class rồi macro-average. CalZSAD dùng $K{=}20$ ảnh bình thường mỗi lớp. Kết quả trung bình qua 8 seed (image) và 3 seed (pixel). FPR mục tiêu $\alpha{=}5\%$; pixel-FAR mục tiêu $\beta{=}1\%$.
 
 \subsection{Kết quả mức ảnh}
 
-Bảng~\ref{tab:image_results} trình bày kết quả mức ảnh. Cột ``Ref.'' là AUROC từ paper AA-CLIP gốc~\cite{ma2025aaclip}; cột ``Ours'' là kết quả reproduce của nhóm (chênh lệch do khác data split và preprocessing).
+Bảng~\ref{tab:image_results} trình bày kết quả mức ảnh. Cột ``Ref.'' là AUROC từ paper AA-CLIP gốc; cột ``Ours'' là kết quả reproduce của nhóm (chênh lệch do khác data split và preprocessing).
 
 \begin{table*}[!t]
 \caption{Kết quả mức ảnh trên backbone AA-CLIP. ``Ref.'' là img-AUROC từ paper gốc, ``Ours'' là kết quả reproduce. Các cột còn lại là metric vận hành từ CalZSAD tại FPR $\approx 5\%$ ($K{=}20$, ngưỡng conformal, tín hiệu top-1\%).}
@@ -167,7 +167,7 @@ CalZSAD kiểm soát FPR sát mức mục tiêu 5\% trên cả 6 bộ (0.94\% đ
 
 Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel.
 
-\begin{table*}[!t]
+\begin{table*}[H]
 \caption{Kết quả mức pixel trên backbone AA-CLIP. Dice@FAR1\% là hệ số Dice khi binarize bản đồ bất thường tại ngưỡng pixel-FAR 1\%.}
 \label{tab:pixel_results}
 \centering
@@ -192,7 +192,7 @@ Bảng~\ref{tab:pixel_results} trình bày kết quả mức pixel.
 }
 \end{table*}
 
-Pixel-AUROC reproduce sát paper gốc (chênh $\pm$0.75). Điểm đáng chú ý: tất cả 6 bộ có px-AUROC trên 92\% nhưng px-AP chỉ từ 9.96 (Liver) đến 63.54 (Retina), khoảng cách 30 đến 88 điểm. Hiện tượng ``AUROC lạc quan''~\cite{saito2015pr} này xảy ra do mất cân bằng cực đoan ở mức pixel, cho thấy cần metric bổ sung như Dice hoặc AUPIMO~\cite{bertoldo2024aupimo}. CalZSAD đạt pixel-FPR sát 1\% (0.87 đến 1.09\%), Retina đạt Dice cao nhất (50.11).
+Pixel-AUROC reproduce sát paper gốc (chênh $\pm$0.75). Điểm đáng chú ý: tất cả 6 bộ có px-AUROC trên 92\% nhưng px-AP chỉ từ 9.96 (Liver) đến 63.54 (Retina), khoảng cách 30 đến 88 điểm. Hiện tượng ``AUROC lạc quan'' này xảy ra do mất cân bằng cực đoan ở mức pixel, cho thấy cần metric bổ sung như Dice hoặc AUPIMO. CalZSAD đạt pixel-FPR sát 1\% (0.87 đến 1.09\%), Retina đạt Dice cao nhất (50.11).
 
 % =====================================================================
 % V. KẾT LUẬN
@@ -200,72 +200,5 @@ Pixel-AUROC reproduce sát paper gốc (chênh $\pm$0.75). Điểm đáng chú �
 \section{Kết luận}
 
 Nhóm áp dụng CalZSAD lên backbone AA-CLIP để biến điểm bất thường thô thành quyết định nhị phân với FPR được kiểm soát, chỉ cần 20 ảnh bình thường mỗi lớp và không cần mẫu lỗi. Thực nghiệm trên 6 bộ dữ liệu cho thấy FPR sát mức mục tiêu 5\%, F1 cách oracle 5 đến 9 điểm (công nghiệp), và pixel-FPR sát 1\%. Đánh giá cũng chỉ ra pixel-AUROC bị lạc quan mạnh (chênh 30 đến 80 điểm so với px-AP) và miền y tế khó hơn đáng kể do hạn chế của backbone CLIP trên ảnh y tế.
-
-% =====================================================================
-% TÀI LIỆU THAM KHẢO
-% =====================================================================
-\begin{thebibliography}{10}
-
-\bibitem{ma2025aaclip}
-W.~Ma \emph{et~al.},
-``AA-CLIP: Enhancing zero-shot anomaly detection via anomaly-aware CLIP,''
-\emph{CVPR}, pp.~4744--4754, 2025.
-
-\bibitem{radford2021clip}
-A.~Radford \emph{et~al.},
-``Learning transferable visual models from natural language supervision,''
-\emph{ICML}, pp.~8748--8763, 2021.
-
-\bibitem{jeong2023winclip}
-J.~Jeong \emph{et~al.},
-``WinCLIP: Zero-/few-shot anomaly classification and segmentation,''
-\emph{CVPR}, pp.~19606--19616, 2023.
-
-\bibitem{zhou2024anomalyclip}
-Q.~Zhou \emph{et~al.},
-``AnomalyCLIP: Object-agnostic prompt learning for zero-shot anomaly detection,''
-\emph{ICLR}, 2024.
-
-\bibitem{cao2024adaclip}
-Y.~Cao \emph{et~al.},
-``AdaCLIP: Adapting CLIP with hybrid learnable prompts for zero-shot anomaly detection,''
-\emph{ECCV}, pp.~55--72, 2024.
-
-\bibitem{saito2015pr}
-T.~Saito and M.~Rehmsmeier,
-``The precision-recall plot is more informative than the ROC plot when evaluating binary classifiers on imbalanced datasets,''
-\emph{PLoS ONE}, vol.~10, no.~3, 2015.
-
-\bibitem{bertoldo2024aupimo}
-J.~P.~C.~Bertoldo \emph{et~al.},
-``AUPIMO: Redefining visual anomaly detection benchmarks with high speed and low tolerance,''
-\emph{BMVC}, 2024.
-
-\bibitem{angelopoulos2023conformal}
-A.~N.~Angelopoulos and S.~Bates,
-``A gentle introduction to conformal prediction and distribution-free uncertainty quantification,''
-\emph{Found. Trends Mach. Learn.}, vol.~16, no.~4, 2023.
-
-\bibitem{bergmann2019mvtec}
-P.~Bergmann \emph{et~al.},
-``MVTec AD: A comprehensive real-world dataset for unsupervised anomaly detection,''
-\emph{CVPR}, pp.~9592--9600, 2019.
-
-\bibitem{mishra2021btad}
-P.~Mishra \emph{et~al.},
-``VT-ADL: A vision transformer network for image anomaly detection and localization,''
-\emph{ISIE}, pp.~1--6, 2021.
-
-\bibitem{jezek2021mpdd}
-S.~Jezek \emph{et~al.},
-``Deep learning-based defect detection of metal parts,''
-\emph{ICUMT}, pp.~66--71, 2021.
-
-\bibitem{bao2023bmad}
-J.~Bao \emph{et~al.},
-``BMAD: Benchmarks for medical anomaly detection,''
-\emph{arXiv:2306.11876}, 2023.
-
-\end{thebibliography}
 
 \end{document}
