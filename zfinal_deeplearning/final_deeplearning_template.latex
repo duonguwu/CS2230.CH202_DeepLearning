@@ -17,7 +17,7 @@
 
 \begin{document}
 
-\title{CalZSAD: Chọn ngưỡng tự động cho phát hiện bất thường\\zero-shot dựa trên CLIP với kiểm soát tỷ lệ dương tính giả}
+\title{CalZSAD: Chọn ngưỡng tự động cho phát hiện bất thường zero-shot dựa trên CLIP với kiểm soát tỷ lệ dương tính giả}
 
 \author{Nguyễn~Dương,~250101084,
         Đinh~Thị~Thu~Hiệp,~250101085,
